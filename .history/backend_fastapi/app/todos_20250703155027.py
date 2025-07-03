@@ -1,17 +1,15 @@
+# backend_fastapi/app/todos.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app import models, schemas, database
-from app.database import get_db
-from app.utils import get_current_user
-from app.models import User
+from app import models, schemas, database, utils
 
 router = APIRouter()
 
 @router.post("/todos", response_model=schemas.TaskOut)
 def create_task(
     task: schemas.TaskCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(database.SessionLocal),
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     new_task = models.Task(**task.dict(), user_id=current_user.id)
     db.add(new_task)
@@ -21,8 +19,8 @@ def create_task(
 
 @router.get("/todos", response_model=list[schemas.TaskOut])
 def get_tasks(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(database.SessionLocal),
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     return db.query(models.Task).filter(models.Task.user_id == current_user.id).all()
 
@@ -30,38 +28,26 @@ def get_tasks(
 def update_task(
     task_id: int,
     task: schemas.TaskCreate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(database.SessionLocal),
+    current_user: models.User = Depends(utils.get_current_user)
 ):
-    db_task = db.query(models.Task).filter(
-        models.Task.id == task_id,
-        models.Task.user_id == current_user.id
-    ).first()
-
+    db_task = db.query(models.Task).filter(models.Task.id == task_id, models.Task.user_id == current_user.id).first()
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
-
     for k, v in task.dict().items():
         setattr(db_task, k, v)
-
     db.commit()
-    db.refresh(db_task)
     return db_task
 
 @router.delete("/todos/{task_id}")
 def delete_task(
     task_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(database.SessionLocal),
+    current_user: models.User = Depends(utils.get_current_user)
 ):
-    db_task = db.query(models.Task).filter(
-        models.Task.id == task_id,
-        models.Task.user_id == current_user.id
-    ).first()
-
-    if not db_task:
+    task = db.query(models.Task).filter(models.Task.id == task_id, models.Task.user_id == current_user.id).first()
+    if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-
-    db.delete(db_task)
+    db.delete(task)
     db.commit()
     return {"detail": "Deleted"}

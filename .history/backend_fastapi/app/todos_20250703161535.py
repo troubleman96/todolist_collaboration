@@ -1,17 +1,19 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app import models, schemas, database
+from app import models, schemas, database, utils
 from app.database import get_db
-from app.utils import get_current_user
-from app.models import User
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/todos",
+    tags=["Todos"]
+)
 
-@router.post("/todos", response_model=schemas.TaskOut)
+# Create a new task
+@router.post("/", response_model=schemas.TaskOut)
 def create_task(
     task: schemas.TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     new_task = models.Task(**task.dict(), user_id=current_user.id)
     db.add(new_task)
@@ -19,19 +21,21 @@ def create_task(
     db.refresh(new_task)
     return new_task
 
-@router.get("/todos", response_model=list[schemas.TaskOut])
+# Get all tasks for current user
+@router.get("/", response_model=list[schemas.TaskOut])
 def get_tasks(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     return db.query(models.Task).filter(models.Task.user_id == current_user.id).all()
 
-@router.put("/todos/{task_id}", response_model=schemas.TaskOut)
+# Update a task
+@router.put("/{task_id}", response_model=schemas.TaskOut)
 def update_task(
     task_id: int,
     task: schemas.TaskCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     db_task = db.query(models.Task).filter(
         models.Task.id == task_id,
@@ -41,18 +45,19 @@ def update_task(
     if not db_task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    for k, v in task.dict().items():
-        setattr(db_task, k, v)
+    for key, value in task.dict().items():
+        setattr(db_task, key, value)
 
     db.commit()
     db.refresh(db_task)
     return db_task
 
-@router.delete("/todos/{task_id}")
+# Delete a task
+@router.delete("/{task_id}")
 def delete_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: models.User = Depends(utils.get_current_user)
 ):
     db_task = db.query(models.Task).filter(
         models.Task.id == task_id,

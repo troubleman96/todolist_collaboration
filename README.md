@@ -15,6 +15,14 @@ This architecture showcases a microfrontend + microbackend pattern, ready for fu
 
 ---
 
+##🙌 Contributors
+
+Hacker JOE (Flask Frontend)
+
+Troubleman (FastAPI Backend)
+
+---
+
 ## ✨ Features
 
 ✅ User Registration & Login  
@@ -131,10 +139,7 @@ Store JWT in HttpOnly cookies instead of JS storage.
 
 Add test coverage (Pytest).
 
-🙌 Contributors
-Hacker Joe (Flask Frontend)
 
-Your Friend (FastAPI Backend)
 
 📜 License
 MIT License

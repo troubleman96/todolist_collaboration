@@ -1,4 +1,4 @@
-const FASTAPI_BASE = "http://192.168.1.100:8000"; // Change to your FastAPI IP
+const FASTAPI_BASE = "http://192.168.137.1:8000"; // Change to your FastAPI IP
 
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("loginForm");

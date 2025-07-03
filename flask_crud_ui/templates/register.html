@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 400px;
+      margin: 60px auto;
+      padding: 20px;
+      background: #f7f9fc;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #28a745;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    input {
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px;
+      font-size: 1rem;
+      border: none;
+      background-color: #28a745;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #1e7e34;
+    }
+    #error {
+      color: red;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Register</h1>
+  <form id="registerForm" autocomplete="off">
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button type="submit">Register</button>
+  </form>
+  <p id="error"></p>
+
+  <script>
+    const apiBaseUrl = 'http://192.168.137.1:8000'; // FastAPI backend URL
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorEl = document.getElementById('error');
+      errorEl.textContent = '';
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/register`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({email, password})
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          errorEl.textContent = errData.detail || 'Registration failed';
+          return;
+        }
+
+        const data = await response.json();
+        const token = data.access_token;
+
+        // Save token in browser storage
+        sessionStorage.setItem('token', token);
+
+        // Send token to Flask to store in session
+        await fetch('/save_token', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({token})
+        });
+
+        // Redirect to dashboard
+        window.location.href = '/';
+
+      } catch (error) {
+        errorEl.textContent = 'Network error. Please try again.';
+      }
+    });
+  </script>
+</body>
+</html>

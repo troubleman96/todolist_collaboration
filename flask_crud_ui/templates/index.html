@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #f7f9fc;
+      color: #333;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #007bff;
+    }
+    a.logout {
+      float: right;
+      text-decoration: none;
+      color: #dc3545;
+      font-weight: bold;
+      margin-top: -40px;
+    }
+    ul#task-list {
+      list-style-type: none;
+      padding: 0;
+    }
+    ul#task-list li {
+      background: white;
+      padding: 10px 15px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    ul#task-list li a {
+      color: #dc3545;
+      text-decoration: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    form#add-task-form {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+    form#add-task-form input[type="text"] {
+      flex-grow: 1;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    form#add-task-form input[type="text"]:focus {
+      border-color: #007bff;
+    }
+    form#add-task-form button {
+      background-color: #007bff;
+      border: none;
+      color: white;
+      padding: 10px 18px;
+      font-size: 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    form#add-task-form button:hover {
+      background-color: #0056b3;
+    }
+    #error-msg {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <a href="/logout" class="logout">Logout</a>
+  <h1>Task List</h1>
+
+  <ul id="task-list">
+    <!-- Tasks rendered here -->
+  </ul>
+
+  <form id="add-task-form" autocomplete="off">
+    <input type="text" id="task-title" placeholder="New Task" required />
+    <button type="submit">Add</button>
+  </form>
+
+  <p id="error-msg"></p>
+
+  <script>
+    const apiBaseUrl = 'http://192.168.137.1:8000'; // FastAPI backend
+
+    function getToken() {
+      return sessionStorage.getItem('token');
+    }
+
+    async function loadTasks() {
+      const token = getToken();
+      if (!token) {
+        document.getElementById('error-msg').textContent = "No token found, please login.";
+        return;
+      }
+
+      const res = await fetch(`${apiBaseUrl}/todos`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
+      if (res.status === 401) {
+        document.getElementById('error-msg').textContent = "Unauthorized. Please login again.";
+        return;
+      }
+
+      const tasks = await res.json();
+      const taskList = document.getElementById('task-list');
+      taskList.innerHTML = '';
+
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.textContent = task.title;
+
+        const del = document.createElement('a');
+        del.textContent = '[Delete]';
+        del.href = '#';
+        del.style.marginLeft = '10px';
+        del.addEventListener('click', async e => {
+          e.preventDefault();
+          await deleteTask(task.id);
+        });
+
+        li.appendChild(del);
+        taskList.appendChild(li);
+      });
+
+      document.getElementById('error-msg').textContent = '';
+    }
+
+    async function addTask(title) {
+      const token = getToken();
+      const res = await fetch(`${apiBaseUrl}/todos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({title})
+      });
+
+      if (res.status === 401) {
+        document.getElementById('error-msg').textContent = "Unauthorized. Please login again.";
+        return;
+      }
+
+      await loadTasks();
+    }
+
+    async function deleteTask(id) {
+      const token = getToken();
+      const res = await fetch(`${apiBaseUrl}/todos/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (res.status === 401) {
+        document.getElementById('error-msg').textContent = "Unauthorized. Please login again.";
+        return;
+      }
+
+      await loadTasks();
+    }
+
+    document.getElementById('add-task-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const input = document.getElementById('task-title');
+      const title = input.value.trim();
+      if (title) {
+        await addTask(title);
+        input.value = '';
+      }
+    });
+
+    loadTasks();
+  </script>
+</body>
+</html>
